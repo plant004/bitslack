@@ -3,9 +3,9 @@ slackbot module using slacker, selenium and phantomjs
 
 ## getting started
 
-install slacker, selenium, and phantomjs(slacker and selenium can install by pip).
+install slacker, selenium, websocket-client and phantomjs(slacker and selenium can install by pip).
 
-    pip install selenium slacker
+    pip install selenium slacker websocket-client
 
 see http://phantomjs.org/ to install phantomjs.
 
@@ -16,4 +16,4 @@ create channel #test and then;
     echo "SLACK_API_KEY='[your slack api key]'" >> settings.py
     echo "SLACK_BOT_NAME='[your slack bot name]'" >> settings.py
     echo "SLACK_ICON_URL='[your slack bot icon url]'" >> settings.py
-    python bitslack.py
+    python hello_bot.py
