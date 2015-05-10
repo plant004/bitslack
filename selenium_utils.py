@@ -62,6 +62,9 @@ class SeleniumUtils(object):
         result = target.find_element_by_css_selector(selector)
         return result
 
+    def clear(self, selector, element=None):
+        self.find(selector, element).clear()
+
     def send_keys(self, selector, keys, element=None):
         self.find(selector, element).send_keys(keys)
 
@@ -69,7 +72,6 @@ class SeleniumUtils(object):
         self.find(selector, element).click()
 
     def login(self, login_path=None, username_selector=None, username=None, password_selector=None, password=None, login_btn_selector=None):
-        #print "login"
         try:
             lp = self.login_path
             if login_path is not None:
@@ -91,15 +93,25 @@ class SeleniumUtils(object):
                 lbs = login_btn_selector
 
             self.get_page(lp)
-            #print self.driver.current_url
+            self.clear(us)
             self.send_keys(us, u)
+            self.clear(ps)
             self.send_keys(ps, p)
             self.click(lbs)
             self.login_flg = True
-            #print "login end"
         except Exception, e:
             self.quit()
             raise e
+
+    def logout(self, logout_path, logout_btn_selector):
+        try:
+            lp = logout_path
+            lbs = logout_btn_selector
+            self.get_page(lp)
+            self.click(lbs)
+            self.login_flg = False
+        except Exception, e:
+            self.quit()
 
     def quit(self):
         self.driver.quit()
