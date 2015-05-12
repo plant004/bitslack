@@ -27,13 +27,20 @@ class EventHandler(object):
         else:
             self.name = str(id(self))
 
-    def on_event(self, bitskack_obj, event):
+    def on_event(self, bitslack_obj, event):
         """
             Slackイベント発生時に呼ばれるメソッドです。
             必要に応じて実装し、BitSlackのadd_event_handler()メソッドでハンドラを追加してください。
-            eventを処理した場合にはTrue、それ以外の場合はFalseを返すようにしてください。
         """
-        return False
+        event_type = event['type']
+        handle_method_name = 'on_%s' % event_type
+        if hasattr(self, handle_method_name):
+            handle_method = getattr(self, handle_method_name)
+            handle_method(bitslack_obj, event)
+
+    def on_hello(self, bitslack_obj, event):
+        if bitslack_obj.debug:
+            bitslack_obj.talk('on_hello called', to='#test', botname=self.name)
 
 class BitSlack(object):
     """
@@ -88,8 +95,7 @@ class BitSlack(object):
             print message
         event = self.decode_event(message)
         for event_handler_name, event_handler in self.event_handlers.items():
-            if event_handler.on_event(self, event):
-                break
+            event_handler.on_event(self, event)
         #ws.close()
 
     def on_error_default(self, ws, error):
@@ -341,26 +347,25 @@ class BitSlack(object):
 
 if __name__ == "__main__":
     import settings
-    bslack = BitSlack(settings.SLACK_API_KEY, settings.SLACK_BOT_NAME,
-            settings.SLACK_ICON_URL,
-            debug=True)
-    bslack.talk(('test', 'hello slack'), '#test')
-    bslack.talk('test', '#test')
-    bslack.talk(u'test', '#test')
+    #bslack = BitSlack(settings.SLACK_API_KEY, settings.SLACK_BOT_NAME,
+    #        settings.SLACK_ICON_URL,
+    #        debug=True)
+    #bslack.talk(('test', 'hello slack'), '#test')
+    #bslack.talk('test', '#test')
+    #bslack.talk(u'test', '#test')
     bslack_rtm = BitSlack(settings.SLACK_API_KEY, settings.SLACK_BOT_NAME,
             settings.SLACK_ICON_URL,
             debug=True)
     class MyEventHandler(EventHandler):
-        def on_event(self, bitslack_obj, event):
+        def on_hello(self, bitslack_obj, event):
             bitslack_obj.talk(('hello from rtm',), '#test', is_rtm=True)
             bitslack_obj.remove_event_handler(self)
             bitslack_obj.add_event_handler(MyEventHandler2('handler2'))
-            return True
     class MyEventHandler2(EventHandler):
-        def on_event(self, bitslack_obj, event):
+        def on_message(self, bitslack_obj, event):
             bitslack_obj.talk(('bye from trm',), '#test', is_rtm=True)
             bitslack_obj.remove_event_handler(self)
             bitslack_obj.end_rtm()
-            return True
+    bslack_rtm.add_event_handler(EventHandler('bitslack rtm test bot'))
     bslack_rtm.add_event_handler(MyEventHandler('handler1'))
     bslack_rtm.start_rtm()
