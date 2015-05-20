@@ -7,22 +7,22 @@ import thread
 import time
 from bitslack import BitSlack, EventHandler
 
-class MessageHandler(EventHandler):
+class TimerHandler(EventHandler):
     start_time = None
     debug = True
 
     def on_hello(self, bitslack_obj, event):
-        bitslack_obj.talk(u'起動しました', '#test')
+        bitslack_obj.talk(u'起動しました', '#test', botname=self.name)
         self.start_time = time.time()
 
     def on_message(self, bitslack_obj, event):
         if float(event['ts']) > self.start_time and \
-            '<@USLACKBOT>' in event['text']:
+            u'<@USLACKBOT>' in event['text']:
             if self.debug:
                 print event['text']
             userid = '<@%s>:' % (event['user'])
             if event['text'] == u'<@USLACKBOT>: exit':
-                bitslack_obj.talk(u'終了します', event['channel'])
+                bitslack_obj.talk(u'終了します', event['channel'], botname=self.name)
                 bitslack_obj.end_rtm()
             elif u'タイマ' in event['text']:
                 sleep_time = self._parse_sleep_time(event['text'])
@@ -34,8 +34,8 @@ class MessageHandler(EventHandler):
                         time.sleep(1)
                     end_time = datetime.datetime.now()
                     timer_finished = u'%s タイマ設定時刻になりました。 [%s]' % (args[1], end_time)
-                    bitslack_obj.talk(timer_finished, event['channel'])
-                bitslack_obj.talk(text, event['channel'])
+                    bitslack_obj.talk(timer_finished, event['channel'], botname=self.name)
+                bitslack_obj.talk(text, event['channel'], botname=self.name)
                 thread.start_new_thread(run, (sleep_time, userid))
 
     def _parse_sleep_time(self, text):
@@ -61,8 +61,9 @@ class MessageHandler(EventHandler):
 
 if __name__ == "__main__":
     import settings
-    bslack = BitSlack(settings.SLACK_API_KEY, settings.SLACK_BOT_NAME,
+    botname = 'timer bot'
+    bslack = BitSlack(settings.SLACK_API_KEY, botname,
             settings.SLACK_ICON_URL,
             debug=False)
-    bslack.add_event_handler(MessageHandler(settings.SLACK_BOT_NAME))
+    bslack.add_event_handler(TimerHandler(botname))
     bslack.start_rtm()

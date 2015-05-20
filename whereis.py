@@ -13,7 +13,7 @@ class WhereIsHandler(EventHandler):
     file_path = 'whereis.txt'
 
     def on_hello(self, bitslack_obj, event):
-        bitslack_obj.talk(u'起動しました', '#test')
+        bitslack_obj.talk(u'起動しました', '#test', botname=self.name)
         self.start_time = time.time()
 
     def on_message(self, bitslack_obj, event):
@@ -31,11 +31,12 @@ class WhereIsHandler(EventHandler):
             elif u'botat' in text:
                 self._on_botat(bitslack_obj, event)
             elif u'exit' in text:
-                bitslack_obj.talk(u'終了します', event['channel'])
+                bitslack_obj.talk(u'終了します', event['channel'], botname=self.name)
                 bitslack_obj.end_rtm()
 
     def _on_whereis(self, bitslack_obj, event):
         user_list = self._parse_user_list(event['text'])
+        not_user_list = self._parse_not_user_list(event['text'])
         whereis_data = load(self.file_path)
         texts = []
         userid = u'<@%s>' % (event['user'])
@@ -45,15 +46,15 @@ class WhereIsHandler(EventHandler):
                 texts.append(u'%sさんは %s にいます。' % (user, whereis_data[user]))
             else:
                 texts.append(u'%sさんの居場所はわかりません。' % (user))
+        for not_user in not_user_list:
+            texts.append(u'%sさんは多分このチームに所属していません。' % (not_user))
         bitslack_obj.talk(texts, event['channel'], botname=self.name)
 
     def _on_wherearewe(self, bitslack_obj, event):
         users = bitslack_obj.get_users()
         whereis_data = load(self.file_path)
         texts = []
-        print whereis_data
         userid = u'<@%s>' % (event['user'])
-        texts.append(u'%s:' % userid)
         for username, user_info in users.items():
             user = u'<@%s>' % (user_info['id'])
             if user in whereis_data:
@@ -65,7 +66,13 @@ class WhereIsHandler(EventHandler):
     def _parse_user_list(self, text):
         result = []
         text = re.sub(r'<@USLACKBOT>:?', '', text, count=1)
-        result = re.findall('(<@.*?>)', text)
+        result = re.findall(r'(<@.*?>)', text)
+        return result
+
+    def _parse_not_user_list(self, text):
+        result = []
+        text = re.sub(r'<@USLACKBOT>:?', '', text, count=1)
+        result = re.findall(r'[^<](@[a-zA-Z0-9._-]*)', text)
         return result
 
     def _on_imat(self, bitslack_obj, event):
@@ -110,8 +117,9 @@ class WhereIsHandler(EventHandler):
         
 if __name__ == "__main__":
     import settings
-    bslack = BitSlack(settings.SLACK_API_KEY, settings.SLACK_BOT_NAME,
+    botname = u'whereis bot'
+    bslack = BitSlack(settings.SLACK_API_KEY, botname,
             settings.SLACK_ICON_URL,
             debug=False)
-    bslack.add_event_handler(WhereIsHandler('whereis bot'))
+    bslack.add_event_handler(WhereIsHandler(botname))
     bslack.start_rtm()

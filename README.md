@@ -14,6 +14,5 @@ create channel #test and then;
     git clone https://github.com/plant004/bitslack.git
     cd bitslack
     echo "SLACK_API_KEY='[your slack api key]'" >> settings.py
-    echo "SLACK_BOT_NAME='[your slack bot name]'" >> settings.py
     echo "SLACK_ICON_URL='[your slack bot icon url]'" >> settings.py
-    python hello_bot.py
+    python hello.py
