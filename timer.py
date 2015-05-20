@@ -42,6 +42,24 @@ class TimerHandler(EventHandler):
         result = 60*3
         text = re.sub(r'<@USLACKBOT>:?', '', text)
         text = re.sub(u'タイマー?[ 　]*', '', text)
+        
+        hhmm_patterns = [
+            r'(\d{1,2}):(\d{1,2})',
+            u'(\d{1,2})時(\d{1,2})分',
+        ]
+        for hhmm_pattern in hhmm_patterns:
+            
+            match_result = re.search(hhmm_pattern, text)
+            if match_result is not None:
+                h = int(match_result.group(1))
+                m = int(match_result.group(2))
+                now_datetime = datetime.datetime.now()
+                timer_datetime = datetime.datetime(now_datetime.year, now_datetime.month, now_datetime.day, h, m)
+                if timer_datetime < now_datetime:
+                    timer_datetime = timer_datetime + datetime.timedelta(days=1)
+                delta = timer_datetime - now_datetime
+                result = delta.days * 86400 + delta.seconds
+                break
         return result
 
     def _make_timer_text(self, sleep_time):
