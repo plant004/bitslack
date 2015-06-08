@@ -279,17 +279,23 @@ class BitSlack(object):
             if self.sleep_per_post > 0:
                 time.sleep(self.sleep_per_post)
 
-    def _to_json(self, text, type='message', channel=None, username=None, icon_url=None):
+    def ping(self):
+        event = self._to_json(text=None, type='ping')
+        self.ws.send(event)
+
+    def _to_json(self, text=None, type='message', channel=None, username=None, icon_url=None):
         event = {}
         event['id'] = self._get_next_id()
-        event['text'] = text
         event['type'] = type
-        event['channel'] = self.get_channel_id('#random') if channel is None else channel
-        if username is not None:
-            event['username'] = username
-        if icon_url is not None:
-            event['icon_url'] = icon_url
-        self.dump(event)
+        if type == 'message':
+            if text is not None:
+                event['text'] = text
+            event['channel'] = self.get_channel_id('#random') if channel is None else channel
+            if username is not None:
+                event['username'] = username
+            if icon_url is not None:
+                event['icon_url'] = icon_url
+        #self.dump(event)
         return json.dumps(event, separators=(',',':'))
 
     def _get_next_id(self):
@@ -308,6 +314,14 @@ class BitSlack(object):
             self.channels = self.make_channels(response.body['channels'])
         if 'url' in response.body:
             #websocket.enableTrace(True)
+            class KeepaliveHandler(EventHandler):
+                def on_hello(self, bitslack_obj, event):
+                    def send_ping(*args):
+                        while True:
+                            time.sleep(60)
+                            bitslack_obj.ping()
+                    thread.start_new_thread(send_ping, None)
+                        
             self.websocket_url = response.body['url']
             self.ws = websocket.WebSocketApp(self.websocket_url,
                     on_message=self.on_message,
