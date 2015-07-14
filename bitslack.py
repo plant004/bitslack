@@ -320,8 +320,8 @@ class BitSlack(object):
                         while True:
                             time.sleep(60)
                             bitslack_obj.ping()
-                    thread.start_new_thread(send_ping, None)
-                        
+                    thread.start_new_thread(send_ping, ())
+            self.add_event_handler(KeepaliveHandler('_keepalive'))
             self.websocket_url = response.body['url']
             self.ws = websocket.WebSocketApp(self.websocket_url,
                     on_message=self.on_message,
