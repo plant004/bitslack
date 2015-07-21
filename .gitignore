@@ -1,3 +1,5 @@
 settings.py
 whereis.txt
-
+*.pyc
+tmp
+nohup.out
