@@ -10,37 +10,12 @@ import time
 import thread
 import websocket
 from slacker import Slacker
-
+from event_handler import EventHandler
 import logging
 class DefaultHandler(logging.StreamHandler):
     pass
 handler = DefaultHandler()
 logging.getLogger().addHandler(handler)
-
-class EventHandler(object):
-    """
-        イベントハンドラクラスです。  
-    """
-    def __init__(self, name=None):
-        if name is not None:
-            self.name = name
-        else:
-            self.name = str(id(self))
-
-    def on_event(self, bitslack_obj, event):
-        """
-            Slackイベント発生時に呼ばれるメソッドです。
-            必要に応じて実装し、BitSlackのadd_event_handler()メソッドでハンドラを追加してください。
-        """
-        event_type = event['type']
-        handle_method_name = 'on_%s' % event_type
-        if hasattr(self, handle_method_name):
-            handle_method = getattr(self, handle_method_name)
-            handle_method(bitslack_obj, event)
-
-    def on_hello(self, bitslack_obj, event):
-        if bitslack_obj.debug:
-            bitslack_obj.talk('on_hello called', to='#test', botname=self.name)
 
 class BitSlack(object):
     """
@@ -101,6 +76,9 @@ class BitSlack(object):
     def on_error_default(self, ws, error):
         print error
         ws.close()
+        # try reconnect if connection closed error
+        if str(error) == "Connection is already closed.":
+            self.start_rtm()
 
     def on_close_default(self, ws):
         if self.debug:
@@ -225,12 +203,12 @@ class BitSlack(object):
                 result = texts[start:end]
                 yield result
 
-    def talk(self, texts, to='#random', botname=None, boticon=None, is_rtm=False):
+    def talk(self, texts, to='#random', botname=None, boticon=None, is_rtm=False, as_user=False):
         channel, username, icon_url = self._get_talk_info(to, botname, boticon)
         if is_rtm:
-            self._talk_with_rtm_api(texts, channel, username, icon_url)
+            self._talk_with_rtm_api(texts, channel, username, icon_url, as_user)
         else:
-            self._talk_with_web_api(texts, channel, username, icon_url)
+            self._talk_with_web_api(texts, channel, username, icon_url, as_user)
 
     def _get_talk_info(self, to, botname, boticon):
         result = [None, None, None]
@@ -253,7 +231,7 @@ class BitSlack(object):
         result[2] = icon_url
         return result
         
-    def _talk_with_web_api(self, texts, channel, username, icon_url):
+    def _talk_with_web_api(self, texts, channel, username, icon_url, as_user):
         # post
         for post_texts in self._slice_texts(texts):
             text = None
@@ -261,11 +239,11 @@ class BitSlack(object):
                 text = u"\n".join(post_texts)
                 if self.debug:
                     print text
-                self.slacker.chat.post_message(channel, text, username, icon_url=icon_url)
+                self.slacker.chat.post_message(channel, text, username, icon_url=icon_url, as_user=as_user)
             if self.sleep_per_post > 0:
                 time.sleep(self.sleep_per_post)
 
-    def _talk_with_rtm_api(self, texts, channel, username, icon_url):
+    def _talk_with_rtm_api(self, texts, channel, username, icon_url, as_user):
         # post
         for post_texts in self._slice_texts(texts):
             text = None
@@ -274,7 +252,7 @@ class BitSlack(object):
                 if self.debug:
                     print text
                 type='message'
-                event = self._to_json(text, type, channel, username, icon_url)
+                event = self._to_json(text, type, channel, username, icon_url, as_user)
                 self.ws.send(event)
             if self.sleep_per_post > 0:
                 time.sleep(self.sleep_per_post)
@@ -283,7 +261,7 @@ class BitSlack(object):
         event = self._to_json(text=None, type='ping')
         self.ws.send(event)
 
-    def _to_json(self, text=None, type='message', channel=None, username=None, icon_url=None):
+    def _to_json(self, text=None, type='message', channel=None, username=None, icon_url=None, as_user=None):
         event = {}
         event['id'] = self._get_next_id()
         event['type'] = type
@@ -295,6 +273,8 @@ class BitSlack(object):
                 event['username'] = username
             if icon_url is not None:
                 event['icon_url'] = icon_url
+            if as_user is not None:
+                event['as_user'] = as_user
         #self.dump(event)
         return json.dumps(event, separators=(',',':'))
 

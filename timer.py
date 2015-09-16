@@ -2,15 +2,13 @@
 
 from argparse import ArgumentParser
 import datetime
-import json
 import re
 import thread
 import time
-from bitslack import BitSlack, EventHandler
+from bitslack import BitSlack
+from event_handler import BotHandler
 
-class TimerHandler(EventHandler):
-    start_time = None
-    debug = False
+class TimerHandler(BotHandler):
     TIMER_PATTERNS = [
         u'タイマ',
         u'set_timer',
@@ -25,57 +23,41 @@ class TimerHandler(EventHandler):
     interactive_status_map = {}
 
     def __init__(self, name=None):
-        EventHandler.__init__(self, name)
+        BotHandler.__init__(self, name)
         description = u'タイマーを設定します。'.encode('utf-8')
+        respond_patterns = [
+            (TimerHandler.TIMER_PATTERNS, self.handle),
+        ]
+        self.set_respond_patterns(respond_patterns)
         self.parser = ArgumentParser(description=description, prog=u'@slackbot タイマ|set_timer'.encode('utf-8'), add_help=False)
 
         self.parser.add_argument('-h', '--help', action='store_true', dest='usage', help=u'ヘルプを表示します。'.encode('utf-8'))
         self.parser.add_argument('-m', '--message', dest='message', default='', help=u'タイマー設定時刻になった場合に表示するメッセージを指定します。'.encode('utf-8'))
 
         self.parser.add_argument('time', help=u'タイマー設定時刻(HH:mm, HH時mm分、HH時間後,mm分後など)'.encode('utf-8'))
-    def on_hello(self, bitslack_obj, event):
-        bitslack_obj.talk(u'起動しました', '#test', botname=self.name)
-        self.start_time = time.time()
 
-    def on_message(self, bitslack_obj, event):
-        if float(event['ts']) > self.start_time and \
-            u'<@USLACKBOT>' in event['text']:
-            if self.debug:
-                print event['text']
-            if event['text'] == u'<@USLACKBOT>: exit':
-                bitslack_obj.talk(u'終了します', event['channel'], botname=self.name)
-                bitslack_obj.end_rtm()
-            else:
-                self._handle(bitslack_obj, event)
+    def handle(self, bitslack_obj, event, args):
+        user_str = self.get_event_user_str(event)
+        text_list = event['text'].split()
+        args, unknown_args = self.parser.parse_known_args(text_list)
+        if args.usage:
+            usage = self.parser.format_help()
+            return usage.decode('utf-8')
 
-    def _handle(self, bitslack_obj, event):
-        userid = '<@%s>:' % (event['user'])
-        if self._is_timer_command(event):
-                text_list = event['text'].split()
-                args, unknown_args = self.parser.parse_known_args(text_list)
-                if args.usage:
-                    usage = self.parser.format_help()
-                    bitslack_obj.talk(usage.decode('utf-8'), event['channel'], botname=self.name)
-                    return
-                sleep_time, timer_text = self._parse_sleep_time(event['text'])
-                start_time = datetime.datetime.now()
-                text = u'%s %sにタイマを設定しました。' % (userid, timer_text)
-                def run(*args):
-                    time.sleep(args[0])
-                    end_time = datetime.datetime.now()
-                    #timer_finished = u'%s タイマ設定時刻になりました。' % (args[1], end_time)
-                    timer_finished = u'%s タイマ設定時刻になりました。%s' % (args[1], args[2])
-                    bitslack_obj.talk(timer_finished, event['channel'], botname=self.name)
-                bitslack_obj.talk(text, event['channel'], botname=self.name)
-                thread.start_new_thread(run, (sleep_time, userid, args.message))
-
-    def _is_timer_command(self, event):
-        result = False
-        for pattern in TimerHandler.TIMER_PATTERNS:
-            if pattern in event['text']:
-                result = True
-                break
-        return result
+        text_without_message = re.sub(args.message, '', event['text'])
+        sleep_time, timer_text = self._parse_sleep_time(text_without_message)
+        start_time = datetime.datetime.now()
+        text = u'%s: %sにタイマを設定しました。' % (user_str, timer_text)
+        def timer_thread(*args):
+            sleep_time = args[0]
+            user_str = args[1]
+            message = args[2]
+            time.sleep(sleep_time)
+            end_time = datetime.datetime.now()
+            timer_finished = u'%s: タイマ設定時刻になりました。%s' % (args[1], args[2])
+            bitslack_obj.talk(timer_finished, event['channel'], botname=self.name)
+        thread.start_new_thread(timer_thread, (sleep_time, user_str, args.message))
+        return text
 
     def _parse_sleep_time(self, text):
         result = None
