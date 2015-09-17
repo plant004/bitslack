@@ -113,7 +113,7 @@ class BotHandler(EventHandler):
                     if len(args) > 0:
                         response_text = response(bitslack_obj, event, args)
                         if response_text is not None:
-                            print 'function response'
+                            #print 'function response'
                             self.talk(bitslack_obj, response_text, event)
                 except Exception, e:
                     print e
@@ -122,7 +122,7 @@ class BotHandler(EventHandler):
                 for pattern in patterns:
                     find_result = re.findall(pattern, event['text'])
                     if find_result:
-                        print 'string response'
+                        #print 'string response'
                         self.talk(bitslack_obj, response_text, event)
                         break
   
