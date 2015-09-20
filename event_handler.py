@@ -150,9 +150,9 @@ class BotHandler(EventHandler):
 #        result = re.sub(r'<@USLACKBOT>', userid, result)
 #        return result
 #
-    def talk(self, bitslack_obj, texts, event):
-        self._talk_to_event_channel(bitslack_obj, texts, event)
+    def talk(self, bitslack_obj, texts, event, boticon=None):
+        self._talk_to_event_channel(bitslack_obj, texts, event, boticon)
 
-    def _talk_to_event_channel(self, bitslack_obj, texts, event):
-        bitslack_obj.talk(texts, event['channel'], botname=self.name)
+    def _talk_to_event_channel(self, bitslack_obj, texts, event, boticon):
+        bitslack_obj.talk(texts, event['channel'], botname=self.name, boticon=boticon)
 

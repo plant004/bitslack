@@ -110,10 +110,83 @@ class WeatherInfo(object):
         texts = []
         texts.append(u'%sの%s(%s)の天気:%s' % (self.city_name, f['dateLabel'], f['date'], f['telop']))
         if f['temperature_min'] != '' or f['temperature_max'] != '':
-            texts.append(u'気温:%s℃～%s℃' % (f['temperature_min'], f['temperature_max']))
+            temp_min = ''
+            temp_max = ''
+            if f['temperature_min'] != '':
+                temp_min = u'%s℃' % (f['temperature_min'])
+            if f['temperature_max'] != '':
+                temp_max = u'%s℃' % (f['temperature_max'])
+            texts.append(u'気温:%s～%s' % (temp_min, temp_max))
         result = u' '.join(texts)
         return result
 
+    def get_forecast(self, dateLabel):
+        for forecast in self.forecasts:
+            if dateLabel == forecast['dateLabel']:
+                return forecast
+        return None
+
+    def get_forecast_text(self, dateLabel):
+        f = self.get_forecast(dateLabel)
+        if f is not None:
+            return self.format(f)
+        return ''
+
+    def get_forecast_image_url(self, dateLabel):
+        f = self.get_forecast(dateLabel)
+        if f is not None:
+            return f['image_url']
+
+    def get_forecast_telop(self, dateLabel):
+        f = self.get_forecast(dateLabel)
+        if f is not None:
+            return f['telop']
+        return None
+        
+    def get_forecast_temp_text(self, dateLabel):
+        f = self.get_forecast(dateLabel)
+        if f is not None:
+            if f['temperature_max'] != '':
+                temp_max = float(f['temperature_max'])
+                if temp_max >= 35:
+                    return u'猛暑日'
+                elif temp_max >= 30:
+                    return u'真夏日'
+                elif temp_max >= 25:
+                    return u'夏日'
+                elif temp_max < 0:
+                    return u'真冬日'
+            if f['temperature_min'] != '':
+                temp_min = float(f['temperature_min'])
+                if temp_min < 0:
+                    return u'冬日'
+        return None
+    def get_forecast_is_hot(self, dateLabel):
+        f = self.get_forecast(dateLabel)
+        if f is not None:
+            if f['temperature_max'] != '':
+                temp_max = float(f['temperature_max'])
+                if temp_max >= 25:
+                    return True
+            if f['temperature_min'] != '':
+                temp_min = float(f['temperature_min'])
+                if temp_min >= 25:
+                    return True
+        return False
+
+    def get_forecast_is_cold(self, dateLabel):
+        f = self.get_forecast(dateLabel)
+        if f is not None:
+            if f['temperature_max'] != '':
+                temp_max = float(f['temperature_max'])
+                if temp_max <= 0:
+                    return True
+            if f['temperature_min'] != '':
+                temp_min = float(f['temperature_min'])
+                if temp_min <= 0:
+                    return True
+        return False
+        
     def dump(self, data, name=None, indent=0):
         spaces = ''.join([' ' * indent])
         if isinstance(data, list):
@@ -129,54 +202,6 @@ class WeatherInfo(object):
         else:
             print (u"%s%s:%s" % (spaces, name, data)).encode('utf-8')
 
-    def get_forecast_text(self, dateLabel):
-        for forecast in self.forecasts:
-            if dateLabel == forecast['dateLabel']:
-                return self.format(forecast)
-        return ''
-
-    def get_forecast_image_url(self, dateLabel):
-        for forecast in self.forecasts:
-            if dateLabel == forecast['dateLabel']:
-                return forecast['image_url']
-
-    def get_forecast_telop(self, dateLabel):
-        for forecast in self.forecasts:
-            if dateLabel == forecast['dateLabel']:
-                return forecast['telop']
-        return None
-        
-def scrape_weather(city_name):
-    result = {}
-    weather = get_weather(u'札幌')
-    result = parse_weather(weather)
-    return result
-
-if __name__ == "__main__":
-    city_name = WeatherUtils.search_city_name(u'東京の天気')
-    print city_name
-    weather_info = WeatherUtils.get_weather_info(city_name)
-    print weather_info.to_string()
-    print weather_info.get_forecast_telop(u'今日')
-
-    def get_forecast_image_url(self, dateLabel):
-        for forecast in self.forecasts:
-            if dateLabel == forecast['dateLabel']:
-                return forecast['image_url']
-        return None
-
-    def get_forecast_telop(self, dateLabel):
-        for forecast in self.forecasts:
-            if dateLabel == forecast['dateLabel']:
-                return forecast['telop']
-        return None
-        
-def scrape_weather(city_name):
-    result = {}
-    weather = get_weather(u'札幌')
-    result = parse_weather(weather)
-    return result
-
 if __name__ == "__main__":
     text = u'東京の明日の天気'
     city_name = WeatherUtils.search_city_name(text)
@@ -187,4 +212,26 @@ if __name__ == "__main__":
     print weather_info.to_string()
     print weather_info.get_forecast_telop(dateLabel)
     print weather_info.get_forecast_image_url(dateLabel)
-    print weather_info.get_forecast_text(dateLabel)
+    
+    weather_info.forecasts[1]['temperature_max'] = '15'
+    weather_info.forecasts[1]['temperature_min'] = '0'
+    print weather_info.get_forecast_temp_text(dateLabel)
+    weather_info.forecasts[1]['temperature_min'] = '-1'
+    print weather_info.get_forecast_temp_text(dateLabel)
+    weather_info.forecasts[1]['temperature_max'] = '-1'
+    print weather_info.get_forecast_temp_text(dateLabel)
+    weather_info.forecasts[1]['temperature_max'] = '-1'
+    print weather_info.get_forecast_temp_text(dateLabel)
+    weather_info.forecasts[1]['temperature_min'] = '0'
+    weather_info.forecasts[1]['temperature_max'] = '24'
+    print weather_info.get_forecast_temp_text(dateLabel)
+    weather_info.forecasts[1]['temperature_max'] = '25'
+    print weather_info.get_forecast_temp_text(dateLabel)
+    weather_info.forecasts[1]['temperature_max'] = '29'
+    print weather_info.get_forecast_temp_text(dateLabel)
+    weather_info.forecasts[1]['temperature_max'] = '30'
+    print weather_info.get_forecast_temp_text(dateLabel)
+    weather_info.forecasts[1]['temperature_max'] = '34'
+    print weather_info.get_forecast_temp_text(dateLabel)
+    weather_info.forecasts[1]['temperature_max'] = '35'
+    print weather_info.get_forecast_temp_text(dateLabel)
