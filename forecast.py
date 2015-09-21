@@ -26,7 +26,7 @@ class ForecastHandler(BotHandler):
             while True:
                 time.sleep(1)
                 now = datetime.datetime.now()
-                if now.weekday() < 7:
+                if now.weekday() < 5:
                     morning = datetime.datetime(now.year, now.month, now.day, 7, 30, 0)
                     evening = datetime.datetime(now.year, now.month, now.day, 18, 30, 0)
                     is_morning = abs(now - morning) < datetime.timedelta(seconds=1)
