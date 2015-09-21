@@ -108,7 +108,8 @@ class BotHandler(EventHandler):
                 args = []
                 for pattern in patterns:
                     find_result = re.findall(pattern, event['text'])
-                    args.extend(find_result)
+                    if len(find_result) > 0:
+                        args.append(find_result)
                 try:
                     if len(args) > 0:
                         response_text = response(bitslack_obj, event, args)

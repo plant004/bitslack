@@ -10,6 +10,10 @@ from weather_hacks.city_list import CityList
 from weather_hacks.weather_utils import WeatherUtils
 
 class ForecastHandler(BotHandler):
+    SCHEDULED_CITY_LIST = [
+        u'東京',
+        u'札幌',
+    ]
 
     def __init__(self, name=None):
         BotHandler.__init__(self, name)
@@ -32,17 +36,19 @@ class ForecastHandler(BotHandler):
                     is_morning = abs(now - morning) < datetime.timedelta(seconds=1)
                     is_evening= abs(now - evening) < datetime.timedelta(seconds=1)
                     if is_morning:
-                        event = {
-                            u'text': u'今日の札幌の天気',
-                            u'channel': u'#weatherreport',
-                        }
-                        self.forecast(bitslack_obj, event, args=())
+                        for city in ForecastHandler.SCHEDULED_CITY_LIST:
+                            event = {
+                                u'text': u'今日の%sの天気' % (city),
+                                u'channel': u'#weatherreport',
+                            }
+                            self.forecast(bitslack_obj, event, args=())
                     if is_evening:
-                        event = {
-                            u'text': u'明日の札幌の天気',
-                            u'channel': u'#weatherreport',
-                        }
-                        self.forecast(bitslack_obj, event, args=())
+                        for city in ForecastHandler.SCHEDULED_CITY_LIST:
+                            event = {
+                                u'text': u'明日の%sの天気' % (city),
+                                u'channel': u'#weatherreport',
+                            }
+                            self.forecast(bitslack_obj, event, args=())
         thread.start_new_thread(timer_thread, ())
 
     def forecast(self, bitslack_obj, event, args):
@@ -86,8 +92,8 @@ class ForecastHandler(BotHandler):
                 elif u'雪' in telop:
                     notice = u'%sは雪が降るようなので、足元や交通機関の遅れに気をつけて下さいね。' % (dateLabel)
                     result.append(notice)
-                elif telop == u'晴':
-                    notice = u'%sは良い天気みたいですよ。' % (dateLabel)
+                elif telop == u'晴れ':
+                    notice = u'%sは一日良い天気みたいですよ！' % (dateLabel)
                     result.append(notice)
                 boticon = weather_info.get_forecast_image_url(dateLabel)
                 self.talk(bitslack_obj, result, event, boticon=boticon)
