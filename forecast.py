@@ -27,7 +27,7 @@ class ForecastHandler(BotHandler):
     def on_hello(self, bitslack_obj, event):
         BotHandler.on_hello(self, bitslack_obj, event)
         def timer_thread(*args):
-            while True:
+            while self.thread_id == Thread.get_ident():
                 time.sleep(1)
                 now = datetime.datetime.now()
                 if now.weekday() < 5:
@@ -49,7 +49,7 @@ class ForecastHandler(BotHandler):
                                 u'channel': u'#weatherreport',
                             }
                             self.forecast(bitslack_obj, event, args=())
-        thread.start_new_thread(timer_thread, ())
+        self.thread_id = thread.start_new_thread(timer_thread, ())
 
     def forecast(self, bitslack_obj, event, args):
         if self.is_bot(event):
