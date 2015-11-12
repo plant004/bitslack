@@ -42,8 +42,9 @@ class BotHandler(EventHandler):
         Bot用のイベントハンドラクラスです。  
     """
     start_time = None
+    hear_on_respond = True
 
-    def __init__(self, name=None):
+    def __init__(self, name=None, hear_on_respond=True):
         EventHandler.__init__(self, name)
         # pattern format: list of tupple ([expr string sequence], response string or function)
         # function must receives lack event dict and result of re.findall(); then return string
@@ -52,6 +53,7 @@ class BotHandler(EventHandler):
         self.respond_patterns = []
         self.hear_patterns = []
         self.start_time = None
+        self.hear_on_respond = hear_on_respond
 
     def set_respond_patterns(self, patterns):
         self.respond_patterns = patterns
@@ -91,7 +93,10 @@ class BotHandler(EventHandler):
         if self.is_after_boot(event):
             if self.is_called(event):
                 self._respond(bitslack_obj, event)
-            self._hear(bitslack_obj, event)
+                if self.hear_on_respond:
+                    self._hear(bitslack_obj, event)
+            else:
+                self._hear(bitslack_obj, event)
 
     def _respond(self, bitslack_obj, event):
         self._match_and_response(bitslack_obj, event,self.respond_patterns)
