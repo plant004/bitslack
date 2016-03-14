@@ -132,6 +132,14 @@ class BitSlack(object):
             result = self.users[username]
         return result
                 
+    def get_user_by_id(self, user_str):
+        result = {}
+        for user in self.users:
+            if 'id' in user and user['id'] == user_str:
+                result = user
+                break
+        return result
+                
     def get_user_property(self, username, key):
         result = None
         user = self.get_user(username)

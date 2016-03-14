@@ -10,28 +10,38 @@ import datetime, time
 
 class SeleniumUtils(object):
 
-    def __init__(self, username_selector, password_selector, login_btn_selector, login_path, config=None):
+    def __init__(self, config=None):
         self.driver = webdriver.PhantomJS(service_args=['--ignore-ssl-errors=true', '--ssl-protocol=tlsv1'])
         self.driver.implicitly_wait(5)
         self.verificationErrors = []
         self.accept_next_alert = True
-
-        self.username_selector = username_selector
-        self.password_selector = password_selector
-        self.login_btn_selector = login_btn_selector
-        self.login_path = login_path
         
         self.login_flg = False
         self.base_url = None
         self.username = None
         self.password = None
+        self.username_selector = None
+        self.password_selector = None 
+        self.login_btn_selector = None
+        self.login_path = None
         self.set_config(config)
 
     def set_config(self, config):
-        if config is not None:
-            self.base_url = config['base_url']
-            self.username = config['username']
-            self.password = config['password']
+        if config is not None and isinstance(config, dict):
+            if 'base_url' in config:
+                self.base_url = config['base_url']
+            if 'username' in config:
+                self.username = config['username']
+            if 'password' in config:
+                self.password = config['password']
+            if 'username_selector' in config:
+                self.username_selector = config['username_selector']
+            if 'password_selector' in config:
+                self.password_selector = config['password_selector']
+            if 'login_btn_selector' in config:
+                self.login_btn_selector = config['login_btn_selector']
+            if 'login_path' in config:
+                self.login_path = config['login_path']
 
     def get_page(self, path):
         self.driver.get(self.base_url + path)
@@ -71,6 +81,9 @@ class SeleniumUtils(object):
     def click(self, selector, element=None):
         self.find(selector, element).click()
 
+    def is_login(self):
+        return self.login_flg
+
     def login(self, login_path=None, username_selector=None, username=None, password_selector=None, password=None, login_btn_selector=None):
         try:
             lp = self.login_path
@@ -103,12 +116,13 @@ class SeleniumUtils(object):
             self.quit()
             raise e
 
-    def logout(self, logout_path, logout_btn_selector):
+    def logout(self, logout_path, logout_btn_selector=None):
         try:
             lp = logout_path
             lbs = logout_btn_selector
             self.get_page(lp)
-            self.click(lbs)
+            if lbs is not None:
+                self.click(lbs)
             self.login_flg = False
         except Exception, e:
             self.quit()
