@@ -37,14 +37,55 @@ class AipoUtils(SeleniumUtils):
             self.get_page(lp)
             self.click('#usr_list')
             self.clear(us)
-            self.send_keys(us, u)
+            self.send_keys(u, us)
             self.clear(ps)
-            self.send_keys(ps, p)
+            self.send_keys(p, ps)
             self.click(lbs)
             self.login_flg = True
         except Exception, e:
             self.quit()
             raise e
+
+class TimeFormatter(object):
+
+    Q = 5
+
+    def quantize(self, start_datetime, end_datetime, q):
+        result = (start_datetime, end_datetime)
+        q_float = float(TimeFormatter.Q)
+        try:
+            start_h = start_datetime.hour
+            start_m = start_datetime.minute
+            # qにあわせる
+            start_m = int(math.floor(start_m / q_float) * q)
+
+            end_h = end_datetime.hour
+            end_m = end_datetime.minute
+            # qにあわせる
+            end_m = int((round(end_m / q_float, 0)) * q)
+            # 開始・終了が同じ時間の場合は1単位分終了をずらす
+            if end_m == start_m and end_h == start_h:
+                if end_h != 24 and end_m != 0:
+                    end_m += q
+                else:
+                    # 終了時刻が夜の場合は
+                    start_h = 23
+                    start_m = 55
+            # 60を超えていた場合の調整
+            if end_m >= 60:
+                end_h += 1
+                end_m = end_m % 60
+            shd = start_h - start_datetime.hour
+            smd = start_m - start_datetime.minute
+            ehd = end_h - end_datetime.hour
+            emd = end_m - end_datetime.minute
+            q_start_datetime = start_datetime + datetime.timedelta(hours=shd, minutes=smd)
+            q_end_datetime = end_datetime + datetime.timedelta(hours=ehd, minutes=emd)
+            result = (q_start_datetime, q_enddatetime)
+        except Exception, e:
+            print e
+            pass
+        return result
         
 class AipoHandler(BotHandler):
     """ Aipoの出退勤および会議室の予約を行うためのHandler """
@@ -108,18 +149,17 @@ class AipoHandler(BotHandler):
 
     def _init_reserve(self):
         """ 予約コマンドの初期化 """
-        # TODO implement
         pass
-        #description = u'Aipoの出勤ボタンを押します。'.encode('utf-8')
-        #prog = (u'@slackbot %s' % (u'|'.join(self.RESERVE_PATTERNS))).encode('utf-8')
-        #parser = ArgumentParser(description=description, prog=prog, add_help=False)
-        #parser.add_argument('-h', '--help', action='store_true', dest='usage', help=u'ヘルプを表示します。'.encode('utf-8'))
-        #parser.add_argument('-t', '--title', dest='title', default='', help=u'予定のタイトルを指定'.encode('utf-8'))
-        #parser.add_argument('-m', '--members', dest='members', default='', help=u'メンバーを指定'.encode('utf-8'))
-        #parser.add_argument('-r', '--room', dest='room', default='', help=u'予約する部屋を指定'.encode('utf-8'))
-        #parser.add_argument('-s', '--start-time', dest='start_time', default='', help=u'HH:mm, HH時mm分で使用開始時刻を指定'.encode('utf-8'))
-        #parser.add_argument('-e', '--end-time', dest='end_time', default='', help=u'HH:mm, HH時mm分, HH時間後, mm分後などで使用終了時刻を指定'.encode('utf-8'))
-        #self.reserve_parser = parser
+        description = u'Aipoの出勤ボタンを押します。'.encode('utf-8')
+        prog = (u'@slackbot %s' % (u'|'.join(self.RESERVE_PATTERNS))).encode('utf-8')
+        parser = ArgumentParser(description=description, prog=prog, add_help=False)
+        parser.add_argument('-h', '--help', action='store_true', dest='usage', help=u'ヘルプを表示します。'.encode('utf-8'))
+        parser.add_argument('-t', '--title', dest='title', default='', help=u'予定のタイトルを指定'.encode('utf-8'))
+        parser.add_argument('-m', '--members', dest='members', default='', help=u'メンバーを指定'.encode('utf-8'))
+        parser.add_argument('-r', '--room', dest='room', default='', help=u'予約する部屋を指定'.encode('utf-8'))
+        parser.add_argument('-s', '--start-time', dest='start_time', default='', help=u'HH:mm, HH時mm分で使用開始時刻を指定'.encode('utf-8'))
+        parser.add_argument('-e', '--end-time', dest='end_time', default='', help=u'HH:mm, HH時mm分, HH時間後, mm分後などで使用終了時刻を指定'.encode('utf-8'))
+        self.reserve_parser = parser
 
     def _init_authinfo(self):
         """ 認証情報設定コマンドの初期化 """
@@ -175,6 +215,8 @@ class AipoHandler(BotHandler):
                         'login_btn_selector': 'input[name="login_submit"]',
                     }
                     au = AipoUtils(config)
+                    texts = u'ログイン中です...'
+                    self.talk(bitslack_obj, texts, event)
                     au.login()
                     result = (user_str, cmd_args, au)
                 else:
@@ -208,27 +250,26 @@ class AipoHandler(BotHandler):
             command_str = u'退勤'
         user_str, cmd_args, au = self.handle_common(bitslack_obj, event, args, parser)
         if au:
-            print "%s exists?" % (selector)
-            print au.find(selector)
+            texts = u'ログイン完了しました。続けて%sボタンを押します...' % (command_str)
+            self.talk(bitslack_obj, texts, event)
             if au.find(selector):
                 au.click(selector)
                 # 成否を返す
                 if au.find(selector):
-                    texts = u'%s %sボタンが押せませんでした。既に%sしているか、認証情報が間違っている可能性があります。' % (user_str, command_str, command_str)
+                    result = u'%s %sボタンが押せませんでした。既に%sしているか、認証情報が間違っている可能性があります。' % (user_str, command_str, command_str)
                 else: 
-                    texts = u'%s %sしました。' % (user_str, command_str)
-                result = texts
+                    result = u'%s %sしました。' % (user_str, command_str)
             else:
                 # ボタンが見つからないことを返す
-                texts = u'%s %sボタンが見つかりませんでした。既に%sしているか、認証情報が間違っている可能性があります。' % (user_str, command_str, command_str)
-                result = texts
-            au.logout(settings.AUPO_LOGOUT_PATH)
+                result = u'%s %sボタンが見つかりませんでした。既に%sしているか、認証情報が間違っている可能性があります。' % (user_str, command_str, command_str)
+            au.logout(settings.AIPO_LOGOUT_PATH)
             au.quit()
         return result
 
     def handle_reserve(self, bitslack_obj, event, args):
         """ 施設を予約する """
         result = None
+        parser = self.reserve_parser
         user_str, cmd_args, au = self.handle_common(bitslack_obj, event, args, parser)
         # 時間の解析
         start_time = datetime.datetime.now()
@@ -240,6 +281,15 @@ class AipoHandler(BotHandler):
         start_time_text = start_time.strftime('%H:%M')
         end_time_text = end_time.strftime('%H:%M')
         # 部屋名等のオプションの解析
+        #parser.add_argument('-t', '--title', dest='title', default='', help=u'予定のタイトルを指定'.encode('utf-8'))
+        #parser.add_argument('-m', '--members', dest='members', default='', help=u'メンバーを指定'.encode('utf-8'))
+        #parser.add_argument('-r', '--room', dest='room', default='', help=u'予約する部屋を指定'.encode('utf-8'))
+        # カレンダーで予定作成
+        link_text = u'カレンダー'
+        if au.find(text=link_text):
+            au.click(text=link_text)
+            add_schedule_btn_selector = u'#予定を追加する_Button1'
+            
         #user_str = self.get_event_user_str(event)
         #text_list = event['text'].split()
         #args, unknown_args = self.parser.parse_known_args(text_list)

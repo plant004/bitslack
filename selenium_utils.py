@@ -63,23 +63,47 @@ class SeleniumUtils(object):
     def finds(self, selector, element=None):
         result = None
         target = self._get_target(element)
-        result = target.find_elements_by_css_selector(selector)
+        try:
+            result = target.find_elements_by_css_selector(selector)
+        except Exception, e:
+            pass
         return result
 
-    def find(self, selector, element=None):
+    def find(self, selector=None, text=None, element=None):
         result = None
         target = self._get_target(element)
-        result = target.find_element_by_css_selector(selector)
+        try:
+            if selector is not None:
+                result = target.find_element_by_css_selector(selector)
+            elif text is not None:
+                result = target.find_element_by_link_text(text)
+        except Exception, e:
+            pass
         return result
 
-    def clear(self, selector, element=None):
-        self.find(selector, element).clear()
+    def clear(self, selector=None, text=None, element=None):
+        finded = self.find(selector, text, element)
+        if finded:
+            finded.clear()
 
-    def send_keys(self, selector, keys, element=None):
-        self.find(selector, element).send_keys(keys)
+    def send_keys(self, keys, selector=None, text=None, element=None):
+        finded = self.find(selector, text, element)
+        if finded:
+            finded.send_keys(keys)
 
-    def click(self, selector, element=None):
-        self.find(selector, element).click()
+    def click(self, selector=None, text=None, element=None):
+        finded = self.find(selector, text, element)
+        if finded:
+            finded.click()
+
+    def select_by_value(self, value, selector=None, text=None, element=None):
+        finded = self.find(selector, text, element)
+        if finded:
+            finded = Select(finded)
+            try:
+                finded.select_by_value(value)
+            except Exception, e:
+                pass
 
     def is_login(self):
         return self.login_flg
@@ -107,9 +131,9 @@ class SeleniumUtils(object):
 
             self.get_page(lp)
             self.clear(us)
-            self.send_keys(us, u)
+            self.send_keys(u, us)
             self.clear(ps)
-            self.send_keys(ps, p)
+            self.send_keys(p, ps)
             self.click(lbs)
             self.login_flg = True
         except Exception, e:
