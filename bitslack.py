@@ -134,7 +134,11 @@ class BitSlack(object):
                 
     def get_user_by_id(self, user_str):
         result = {}
-        for user in self.users:
+        if self.users is None:
+            self.users = self.get_users()
+        for user in self.users.values():
+            if 'id' in user:
+                print user['id']
             if 'id' in user and user['id'] == user_str:
                 result = user
                 break
@@ -147,6 +151,13 @@ class BitSlack(object):
             result = user[key]
         return result
                 
+    def get_user_name_by_id(self, user_id):
+        result = ''
+        user = self.get_user_by_id(user_id)
+        if 'name' in user:
+            result = user['name']
+        return result
+
     def get_user_real_name(self, username):
         result = self.get_user_property(username, 'real_name') 
         if result is None or result == '':
@@ -167,34 +178,59 @@ class BitSlack(object):
     def make_channels(self, channel_list):
         result = self.channels
         for channel in channel_list:
-            channelname = channel['name']
-            result[channelname] = channel
+            channel_name = channel['name']
+            result[channel_name] = channel
         return result
 
-    def get_channel(self, channelname):
+    def get_channel(self, channel_name):
         result = {}
-        if self.channels is None or channelname not in self.channels:
+        if self.channels is None or channel_name not in self.channels:
             self.channels = self.get_channels()
-        if channelname in self.channels:
-            result = self.channels[channelname]
+        if channel_name in self.channels:
+            result = self.channels[channel_name]
         return result
-                
-    def get_channel_property(self, channelname, key):
+
+    def get_channel_by_id(self, channel_id):
+        result = {}
+        if self.channels is None:
+            self.channels = self.get_channels()
+        for channel_name, channel in self.channels.items():
+            if channel['id'] == channel_id:
+                result = channel
+                break
+        return result
+
+    def get_channel_property(self, channel_name, key):
         result = None
-        channel = self.get_channel(channelname)
+        channel = self.get_channel(channel_name)
         if key in channel:
             result = channel[key]
         return result
 
-    def get_channel_id(self, channelname):
-        return self.get_channel_property(channelname[1:], 'id')
-
-    def get_talk_channel(self, channelname):
+    def get_channel_property_by_id(self, channel_id, key):
         result = None
-        if channelname.startswith('#'):
-           result = self.get_channel_id(channelname)
+        channel = self.get_channel_by_id(channel_id)
+        if key in channel:
+            result = channel[key]
+        return result
+
+    def get_channel_id(self, channel_name):
+        return self.get_channel_property(channel_name[1:], 'id')
+
+    def get_channel_name_by_id(self, channel_id, with_sharp=False):
+        result = None
+        channel_name = self.get_channel_property_by_id(channel_id, 'name')
+        if channel_name != None:
+            prefix = '#' if with_sharp else ''
+            result = '%s%s' % (prefix, channel_name)
+        return result
+
+    def get_talk_channel(self, channel_name):
+        result = None
+        if channel_name.startswith('#'):
+           result = self.get_channel_id(channel_name)
         else:
-           result = self.get_user_id(channelname)
+           result = self.get_user_id(channel_name)
         return result 
  
     # post functions
